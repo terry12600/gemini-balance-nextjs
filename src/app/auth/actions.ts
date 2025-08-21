@@ -13,9 +13,14 @@ if (secretKey === "your-fallback-secret-key") {
 }
 const key = new TextEncoder().encode(secretKey);
 
-import { JWTPayload } from "jose";
+import type { JWTPayload } from "jose";
 
-export async function encrypt(payload: JWTPayload) {
+interface SessionPayload extends JWTPayload {
+  user?: { username: string };
+  expires?: Date;
+}
+
+export async function encrypt(payload: SessionPayload) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -23,9 +28,9 @@ export async function encrypt(payload: JWTPayload) {
     .sign(key);
 }
 
-export async function decrypt(input: string): Promise<JWTPayload | null> {
+export async function decrypt(input: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(input, key, {
+    const { payload } = await jwtVerify<SessionPayload>(input, key, {
       algorithms: ["HS256"],
     });
     return payload;
@@ -46,7 +51,8 @@ export async function setInitialPassword(password: string) {
     const expires = new Date(Date.now() + 3600 * 1000); // 1 hour
     const session = await encrypt({ user: { username: "admin" }, expires });
 
-    cookies().set("session", session, { expires, httpOnly: true });
+    const cookieStore = await cookies();
+    cookieStore.set("session", session, { expires, httpOnly: true });
 
     return { success: true };
 }
@@ -67,16 +73,19 @@ export async function login(password: string) {
     const expires = new Date(Date.now() + 3600 * 1000); // 1 hour
     const session = await encrypt({ user: { username: "admin" }, expires });
 
-    cookies().set("session", session, { expires, httpOnly: true });
+    const cookieStore = await cookies();
+    cookieStore.set("session", session, { expires, httpOnly: true });
     return { success: true };
 }
 
 export async function logout() {
-  cookies().set("session", "", { expires: new Date(0) });
+  const cookieStore = await cookies();
+  cookieStore.set("session", "", { expires: new Date(0) });
 }
 
 export async function getSession() {
-  const session = cookies().get("session")?.value;
+  const cookieStore = await cookies();
+  const session = cookieStore.get("session")?.value;
   if (!session) return null;
   return await decrypt(session);
 }
@@ -86,13 +95,18 @@ export async function updateSession(request: NextRequest) {
   if (!session) return;
 
   const parsed = await decrypt(session);
-  parsed.expires = new Date(Date.now() + 3600 * 1000); // 1 hour
+  if (!parsed) {
+    return;
+  }
+
+  const expires = new Date(Date.now() + 3600 * 1000);
+  parsed.expires = expires;
   const res = NextResponse.next();
   res.cookies.set({
     name: "session",
     value: await encrypt(parsed),
     httpOnly: true,
-    expires: parsed.expires,
+    expires: expires,
   });
   return res;
 }

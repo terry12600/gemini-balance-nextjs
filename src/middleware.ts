@@ -1,3 +1,4 @@
+import { updateSession } from "@/app/auth/actions";
 import { i18n } from "@/i18n-config";
 import { match as matchLocale } from "@formatjs/intl-localematcher";
 import Negotiator from "negotiator";
@@ -24,7 +25,7 @@ function getLocale(request: NextRequest): string | undefined {
   return matchLocale(languages, locales, defaultLocale);
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Check if there is any supported locale in the pathname
@@ -60,13 +61,16 @@ export function middleware(request: NextRequest) {
       url.pathname = `/${locale}/auth`;
       return NextResponse.redirect(url);
     }
+    return await updateSession(request);
   }
 
-  return NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: requestHeaders,
     },
   });
+
+  return response;
 }
 
 export const config = {
