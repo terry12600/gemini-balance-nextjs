@@ -1,9 +1,7 @@
-import { decrypt } from "@/app/auth/actions";
 import { i18n } from "@/i18n-config";
 import { match as matchLocale } from "@formatjs/intl-localematcher";
 import Negotiator from "negotiator";
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from 'next/headers';
 
 function getLocale(request: NextRequest): string | undefined {
   // 1. Check for language preference in cookie
