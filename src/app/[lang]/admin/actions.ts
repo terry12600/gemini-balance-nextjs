@@ -214,15 +214,17 @@ export async function updateSetting(key: string, value: string) {
   }
 }
 
-export async function updateSettings(settings: ParsedSettings) {
+type SettingsFormData = ParsedSettings & {
+  AUTH_TOKEN?: string;
+};
+
+export async function updateSettings(settings: SettingsFormData) {
   const locale = await getLocale();
   const dictionary = await getDictionary(locale);
   const t = dictionary.config.form;
 
   try {
-    const settingsToUpdate: Omit<ParsedSettings, "AUTH_TOKEN"> & {
-      AUTH_TOKEN?: string;
-    } = { ...settings };
+    const settingsToUpdate: Partial<SettingsFormData> = { ...settings };
 
     // Handle AUTH_TOKEN separately
     if (settings.AUTH_TOKEN) {
