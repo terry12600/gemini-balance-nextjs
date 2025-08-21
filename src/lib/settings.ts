@@ -3,8 +3,7 @@ import logger from "./logger";
 
 // 定义默认配置
 const defaultSettings = {
-  AUTH_TOKEN: "", // Add AUTH_TOKEN to the defaults
-  ALLOWED_TOKENS: "",
+  ADMIN_PASSWORD_HASH: "",
   MAX_FAILURES: "3",
   HEALTH_CHECK_MODEL: "gemini-1.5-flash",
   PROXY_URL: "", // Optional proxy URL
@@ -22,8 +21,7 @@ const defaultSettings = {
 
 // Define a more specific type for settings to help with parsing
 export type ParsedSettings = {
-  AUTH_TOKEN: string;
-  ALLOWED_TOKENS: string;
+  ADMIN_PASSWORD_HASH?: string;
   MAX_FAILURES: number;
   HEALTH_CHECK_MODEL: string;
   PROXY_URL: string;
@@ -73,8 +71,7 @@ export async function getSettings(): Promise<ParsedSettings> {
 
 function parseSettings(settings: Settings): ParsedSettings {
   return {
-    AUTH_TOKEN: settings.AUTH_TOKEN,
-    ALLOWED_TOKENS: settings.ALLOWED_TOKENS,
+    ADMIN_PASSWORD_HASH: settings.ADMIN_PASSWORD_HASH,
     MAX_FAILURES: parseInt(settings.MAX_FAILURES, 10),
     HEALTH_CHECK_MODEL: settings.HEALTH_CHECK_MODEL,
     PROXY_URL: settings.PROXY_URL,
@@ -104,4 +101,19 @@ export async function updateSetting(key: string, value: string) {
     create: { key, value },
   });
   // No need to call resetSettings() as the cache has been removed.
+}
+
+/**
+ * 更新多个配置项。
+ * @param settings - 一个包含要更新的配置项的键值对对象
+ */
+export async function updateSettings(settings: Partial<ParsedSettings>) {
+    const updates = Object.entries(settings).map(([key, value]) => {
+        return prisma.setting.upsert({
+            where: { key },
+            update: { value: String(value) },
+            create: { key, value: String(value) },
+        });
+    });
+    await prisma.$transaction(updates);
 }

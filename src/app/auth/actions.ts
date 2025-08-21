@@ -1,72 +1,96 @@
 "use server";
 
-import { getDictionary } from "@/lib/get-dictionary";
-import { getLocale } from "@/lib/get-locale";
+import { getSettings, updateSettings } from "@/lib/settings";
 import logger from "@/lib/logger";
-import { getSettings, updateSetting } from "@/lib/settings";
-import bcrypt from "bcrypt";
+import * as bcrypt from "bcrypt";
+import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { NextRequest, NextResponse } from "next/server";
 
-const SALT_ROUNDS = 10;
+const secretKey = process.env.SESSION_SECRET || "your-fallback-secret-key";
+if (secretKey === "your-fallback-secret-key") {
+    logger.warn("SESSION_SECRET is not set, using fallback secret key.");
+}
+const key = new TextEncoder().encode(secretKey);
 
-export async function login(
-  state: { error?: string },
-  formData: FormData
-): Promise<{ error?: string }> {
-  const locale = await getLocale();
-  const dictionary = await getDictionary(locale);
-  const t = dictionary.loginForm;
+export async function encrypt(payload: any) {
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(key);
+}
 
-  const submittedToken = (formData.get("token") as string) || "";
-
-  if (submittedToken === "") {
-    logger.warn("Login failed: Token was empty.");
-    return { error: t.error.emptyToken };
+export async function decrypt(input: string): Promise<any> {
+  try {
+    const { payload } = await jwtVerify(input, key, {
+      algorithms: ["HS256"],
+    });
+    return payload;
+  } catch (error) {
+    return null;
   }
+}
 
-  const settings = await getSettings();
-  const storedAuthTokenHash = settings.AUTH_TOKEN;
-  logger.info(`Stored auth token hash exists: ${!!storedAuthTokenHash}`);
+export async function setInitialPassword(password: string) {
+    const settings = await getSettings();
+    if (settings.ADMIN_PASSWORD_HASH) {
+        return { error: "Password has already been set." };
+    }
 
-  // Case 1: System is already configured with a hashed token.
-  if (storedAuthTokenHash) {
-    const isValid = await bcrypt.compare(submittedToken, storedAuthTokenHash);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await updateSettings({ ADMIN_PASSWORD_HASH: hashedPassword });
+
+    const expires = new Date(Date.now() + 3600 * 1000); // 1 hour
+    const session = await encrypt({ user: { username: "admin" }, expires });
+
+    cookies().set("session", session, { expires, httpOnly: true });
+
+    return { success: true };
+}
+
+export async function login(password: string) {
+    const settings = await getSettings();
+    const hashedPassword = settings.ADMIN_PASSWORD_HASH;
+
+    if (!hashedPassword) {
+        return { error: "Initial password has not been set." };
+    }
+
+    const isValid = await bcrypt.compare(password, hashedPassword);
     if (!isValid) {
-      logger.warn("Login failed: Invalid token.");
-      return { error: t.error.invalidToken };
+        return { error: "Invalid password." };
     }
-  }
-  // Case 2: Initial setup. The first submitted token sets the new hash.
-  else {
-    logger.info("Initial setup: Hashing new token...");
-    const newHash = await bcrypt.hash(submittedToken, SALT_ROUNDS);
-    try {
-      await updateSetting("AUTH_TOKEN", newHash);
-      logger.info("AUTH_TOKEN has been set.");
-    } catch (error) {
-      logger.error({ error }, "Error calling updateSetting.");
-      return { error: t.error.failedToSaveToken };
-    }
-  }
 
-  logger.info("Login successful. Setting cookie and redirecting.");
-  // If we reach here, login is successful.
-  // Store the raw token in the cookie for subsequent requests validation.
-  const cookieStore = await cookies();
-  cookieStore.set("auth_token", submittedToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-  });
+    const expires = new Date(Date.now() + 3600 * 1000); // 1 hour
+    const session = await encrypt({ user: { username: "admin" }, expires });
 
-  redirect("/admin");
+    cookies().set("session", session, { expires, httpOnly: true });
+    return { success: true };
 }
 
 export async function logout() {
-  const cookieStore = await cookies();
-  cookieStore.delete("auth_token");
-  redirect("/");
+  cookies().set("session", "", { expires: new Date(0) });
+}
+
+export async function getSession() {
+  const session = cookies().get("session")?.value;
+  if (!session) return null;
+  return await decrypt(session);
+}
+
+export async function updateSession(request: NextRequest) {
+  const session = request.cookies.get("session")?.value;
+  if (!session) return;
+
+  const parsed = await decrypt(session);
+  parsed.expires = new Date(Date.now() + 3600 * 1000); // 1 hour
+  const res = NextResponse.next();
+  res.cookies.set({
+    name: "session",
+    value: await encrypt(parsed),
+    httpOnly: true,
+    expires: parsed.expires,
+  });
+  return res;
 }

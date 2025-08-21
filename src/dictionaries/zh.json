@@ -255,9 +255,15 @@
     },
     "loginForm": {
         "title": "管理员访问",
-        "tokenLabel": "身份验证令牌",
+        "initialSetupTitle": "初始管理员设置",
+        "passwordLabel": "密码",
+        "newPasswordLabel": "新管理员密码",
+        "confirmPasswordLabel": "确认密码",
         "signIn": "登录",
         "signingIn": "登录中...",
+        "setInitialPassword": "设置初始密码",
+        "settingPassword": "正在设置密码...",
+        "passwordsDoNotMatch": "密码不匹配。",
         "error": {
             "emptyToken": "令牌不能为空。",
             "invalidToken": "令牌无效。",

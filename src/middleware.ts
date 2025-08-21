@@ -1,7 +1,9 @@
+import { decrypt } from "@/app/auth/actions";
 import { i18n } from "@/i18n-config";
 import { match as matchLocale } from "@formatjs/intl-localematcher";
 import Negotiator from "negotiator";
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from 'next/headers';
 
 function getLocale(request: NextRequest): string | undefined {
   // 1. Check for language preference in cookie
@@ -53,12 +55,9 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(`/${i18n.defaultLocale}/admin`) ||
     pathname.startsWith(`/zh/admin`)
   ) {
-    const tokenFromCookie = request.cookies.get("auth_token")?.value;
-
-    // If the cookie is not present, redirect to the login page.
-    if (!tokenFromCookie) {
+    const session = request.cookies.get("session")?.value;
+    if (!session) {
       const url = request.nextUrl.clone();
-      // Redirect to the login page for the current locale
       const locale = pathname.split("/")[1];
       url.pathname = `/${locale}/auth`;
       return NextResponse.redirect(url);

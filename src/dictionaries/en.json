@@ -255,9 +255,15 @@
     },
     "loginForm": {
         "title": "Admin Access",
-        "tokenLabel": "Authentication Token",
+        "initialSetupTitle": "Initial Admin Setup",
+        "passwordLabel": "Password",
+        "newPasswordLabel": "New Admin Password",
+        "confirmPasswordLabel": "Confirm Password",
         "signIn": "Sign in",
         "signingIn": "Signing in...",
+        "setInitialPassword": "Set Initial Password",
+        "settingPassword": "Setting Password...",
+        "passwordsDoNotMatch": "Passwords do not match.",
         "error": {
             "emptyToken": "Token cannot be empty.",
             "invalidToken": "Invalid token.",
