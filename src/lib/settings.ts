@@ -79,9 +79,9 @@ function parseSettings(settings: Settings): ParsedSettings {
     PROXY_URL: settings.PROXY_URL,
     TOOLS_CODE_EXECUTION_ENABLED:
       settings.TOOLS_CODE_EXECUTION_ENABLED === "true",
-    SAFETY_SETTINGS: JSON.parse(settings.SAFETY_SETTINGS),
-    THINKING_BUDGET_MAP: JSON.parse(settings.THINKING_BUDGET_MAP),
-    ALLOWED_TOKENS: JSON.parse(settings.ALLOWED_TOKENS),
+    SAFETY_SETTINGS: JSON.parse(settings.SAFETY_SETTINGS || "[]"),
+    THINKING_BUDGET_MAP: JSON.parse(settings.THINKING_BUDGET_MAP || "{}"),
+    ALLOWED_TOKENS: JSON.parse(settings.ALLOWED_TOKENS || "[]"),
   };
 }
 
