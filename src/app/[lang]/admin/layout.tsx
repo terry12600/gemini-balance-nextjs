@@ -17,7 +17,7 @@ export default async function AdminLayout({
   // This is a server component, so we can safely access the database here.
   const cookieStore = await cookies();
   const tokenFromCookie = cookieStore.get("auth_token")?.value;
-  const { AUTH_TOKEN: storedAuthTokenHash } = await getSettings();
+  const { ADMIN_PASSWORD_HASH: storedAuthTokenHash } = await getSettings();
 
   let isAuthorized = false;
   if (tokenFromCookie && storedAuthTokenHash) {
