@@ -17,6 +17,7 @@ const defaultSettings = {
     { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
   ]),
   THINKING_BUDGET_MAP: JSON.stringify({}),
+  ALLOWED_TOKENS: "[]",
 };
 
 // Define a more specific type for settings to help with parsing
@@ -28,6 +29,7 @@ export type ParsedSettings = {
   TOOLS_CODE_EXECUTION_ENABLED: boolean;
   SAFETY_SETTINGS: { category: string; threshold: string }[];
   THINKING_BUDGET_MAP: { [key: string]: number };
+  ALLOWED_TOKENS: string[];
 };
 
 type Settings = typeof defaultSettings;
@@ -79,6 +81,7 @@ function parseSettings(settings: Settings): ParsedSettings {
       settings.TOOLS_CODE_EXECUTION_ENABLED === "true",
     SAFETY_SETTINGS: JSON.parse(settings.SAFETY_SETTINGS),
     THINKING_BUDGET_MAP: JSON.parse(settings.THINKING_BUDGET_MAP),
+    ALLOWED_TOKENS: JSON.parse(settings.ALLOWED_TOKENS),
   };
 }
 
@@ -108,12 +111,14 @@ export async function updateSetting(key: string, value: string) {
  * @param settings - 一个包含要更新的配置项的键值对对象
  */
 export async function updateSettings(settings: Partial<ParsedSettings>) {
-    const updates = Object.entries(settings).map(([key, value]) => {
-        return prisma.setting.upsert({
-            where: { key },
-            update: { value: String(value) },
-            create: { key, value: String(value) },
-        });
+  const updates = Object.entries(settings).map(([key, value]) => {
+    const valueToStore =
+      typeof value === "object" ? JSON.stringify(value) : String(value);
+    return prisma.setting.upsert({
+      where: { key },
+      update: { value: valueToStore },
+      create: { key, value: valueToStore },
     });
-    await prisma.$transaction(updates);
+  });
+  await prisma.$transaction(updates);
 }

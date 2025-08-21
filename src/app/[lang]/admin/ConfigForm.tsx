@@ -20,8 +20,10 @@ interface ConfigFormProps {
 // Use a different type for form state to handle JSON as strings
 type FormState = Omit<
   ParsedSettings,
-  "SAFETY_SETTINGS" | "THINKING_BUDGET_MAP"
+  "SAFETY_SETTINGS" | "THINKING_BUDGET_MAP" | "ALLOWED_TOKENS"
 > & {
+  AUTH_TOKEN: string;
+  ALLOWED_TOKENS: string;
   SAFETY_SETTINGS: string;
   THINKING_BUDGET_MAP: string;
 };
@@ -31,6 +33,7 @@ export function ConfigForm({ settings, dictionary }: ConfigFormProps) {
   const [formData, setFormData] = useState<FormState>({
     ...settings,
     AUTH_TOKEN: "", // Don't pre-fill for security
+    ALLOWED_TOKENS: settings.ALLOWED_TOKENS.join(", "),
     SAFETY_SETTINGS: JSON.stringify(settings.SAFETY_SETTINGS, null, 2),
     THINKING_BUDGET_MAP: JSON.stringify(settings.THINKING_BUDGET_MAP, null, 2),
   });
@@ -51,6 +54,9 @@ export function ConfigForm({ settings, dictionary }: ConfigFormProps) {
       try {
         const dataToSave: ParsedSettings = {
           ...formData,
+          ALLOWED_TOKENS: formData.ALLOWED_TOKENS.split(",").map((s) =>
+            s.trim()
+          ),
           MAX_FAILURES: Number(formData.MAX_FAILURES),
           SAFETY_SETTINGS: JSON.parse(formData.SAFETY_SETTINGS),
           THINKING_BUDGET_MAP: JSON.parse(formData.THINKING_BUDGET_MAP),
