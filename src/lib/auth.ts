@@ -60,9 +60,7 @@ export async function isAuthenticated(
 
   try {
     const settings = await getSettings();
-    const allowedTokens = settings.ALLOWED_TOKENS.split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+    const allowedTokens = settings.ALLOWED_TOKENS;
 
     // If ALLOWED_TOKENS is not configured, deny all requests for security.
     if (allowedTokens.length === 0) {
