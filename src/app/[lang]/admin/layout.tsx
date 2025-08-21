@@ -1,8 +1,6 @@
+import { getSession } from "@/app/auth/actions";
 import { Locale } from "@/i18n-config";
 import { getDictionary } from "@/lib/get-dictionary";
-import { getSettings } from "@/lib/settings";
-import bcrypt from "bcrypt";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminClientLayout from "./AdminClientLayout";
 
@@ -14,20 +12,12 @@ export default async function AdminLayout({
   params: Promise<{ lang: Locale }>;
 }) {
   const { lang } = await paramsPromise;
-  // This is a server component, so we can safely access the database here.
-  const cookieStore = await cookies();
-  const tokenFromCookie = cookieStore.get("auth_token")?.value;
-  const { ADMIN_PASSWORD_HASH: storedAuthTokenHash } = await getSettings();
+  const session = await getSession();
 
-  let isAuthorized = false;
-  if (tokenFromCookie && storedAuthTokenHash) {
-    isAuthorized = await bcrypt.compare(tokenFromCookie, storedAuthTokenHash);
-  }
-
-  // If the cookie is missing, or if it's present but doesn't match the
-  // hashed token in the database, redirect to the login page for the current locale.
-  if (!isAuthorized) {
-    redirect(`/${lang}`);
+  // The middleware should handle redirection for non-authenticated users,
+  // but we add a fallback here for extra security.
+  if (!session) {
+    redirect(`/${lang}/auth`);
   }
 
   const dictionary = await getDictionary(lang);
