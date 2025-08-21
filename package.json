@@ -4,7 +4,7 @@
     "private": true,
     "scripts": {
         "dev": "next dev | pino-pretty",
-        "build": "prisma migrate deploy && next build --force",
+        "build": "npx prisma migrate deploy && next build --force",
         "start": "next start",
         "lint": "next lint",
         "db:migrate": "prisma migrate dev",
